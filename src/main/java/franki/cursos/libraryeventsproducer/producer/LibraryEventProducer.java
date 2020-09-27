@@ -49,7 +49,7 @@ public class LibraryEventProducer {
 
     }
 
-    public void sendLibraryEventAsync2(LibraryEvent libraryEvent) throws JsonProcessingException {
+    public ListenableFuture<SendResult<Integer, String>> sendLibraryEventAsync2(LibraryEvent libraryEvent) throws JsonProcessingException {
         String data = objectMapper.writeValueAsString(libraryEvent);
         Integer key = libraryEvent.getLibraryEventId();
 
@@ -64,6 +64,8 @@ public class LibraryEventProducer {
         );
 
         log.info("Continua la ejecucion de sendLibraryEvent");
+
+        return listenableFuture;
 
     }
 

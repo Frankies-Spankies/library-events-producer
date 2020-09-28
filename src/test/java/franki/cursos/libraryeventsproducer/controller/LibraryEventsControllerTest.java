@@ -1,5 +1,6 @@
 package franki.cursos.libraryeventsproducer.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import franki.cursos.libraryeventsproducer.domain.Book;
 import franki.cursos.libraryeventsproducer.domain.LibraryEvent;
@@ -11,10 +12,12 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.*;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
@@ -22,13 +25,17 @@ import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.web.client.RestTemplate;
 
+import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Exchanger;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @Slf4j
@@ -49,6 +56,9 @@ class LibraryEventsControllerTest {
 
     @Autowired
     EmbeddedKafkaBroker embeddedKafkaBroker;
+
+    @Autowired
+    RestTemplateBuilder restTemplateBuilder;
 
     private Consumer<Integer,String> consumer;
 
@@ -88,6 +98,28 @@ class LibraryEventsControllerTest {
         String expectedRecord ="{\"libraryEventId\":null,\"book\":{\"bookId\":123,\"bookName\":\"DDD\",\"bookAuthor\":\"Eric evans\"},\"libraryEventType\":\"NEW\"}";
         String value = consumerRecord.value();
         assertEquals(expectedRecord, value);
+
+    }
+
+    @Test
+    void putLibraryEvent() throws Exception {
+        libraryEvent.setLibraryEventId(123);
+        String libraryEventBody = mapper.writeValueAsString(libraryEvent);
+
+        ResultActions perform = mockMvc.perform(put("/v1/libraryevent")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(libraryEventBody));
+
+        String contentAsString = perform.andReturn().getResponse().getContentAsString();
+        log.info("Result of /v1/libraryevent: " + contentAsString);
+        perform.andExpect(status().isOk());
+
+        ConsumerRecord<Integer, String> consumerRecord =  KafkaTestUtils.getSingleRecord(consumer,"library-events");
+        Thread.sleep(3000);
+        String expectedRecord ="{\"libraryEventId\":123,\"book\":{\"bookId\":123,\"bookName\":\"DDD\",\"bookAuthor\":\"Eric evans\"},\"libraryEventType\":\"UPDATE\"}";
+        String value = consumerRecord.value();
+        assertEquals(expectedRecord, value);
+
 
     }
 }

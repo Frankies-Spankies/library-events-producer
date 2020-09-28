@@ -33,6 +33,10 @@ public class LibraryEventProducer {
      * Las funciones del calback funciona de manera asincrona con respecto a la respuesta, sin importar si la respuesta es correcta o incorrecta, i.e Una vez que se obtiene la respuesta del broker
      * se continua el thread continua con la ejecucion desde el punto donde se llamo el mensaje, y en un thread distinto y de manera asincrona
      * se ejecuta las funciones de callback.
+     *
+     *
+     * Key en este caso se ocupa la llave LibraryEventId para determinar la particion del mensaje
+     * Siendo asi que cada mensaje tenga su propia particion
      */
     public void sendLibraryEventAsync(LibraryEvent libraryEvent) throws JsonProcessingException {
         String data = objectMapper.writeValueAsString(libraryEvent.getBook());
@@ -99,7 +103,7 @@ public class LibraryEventProducer {
     }
 
     public void succes(Integer key, String data, SendResult<Integer, String> responseOnSend) {
-        log.info("Succes response key: {}, data: {}, response: {}", key, data, responseOnSend.getRecordMetadata().partition());
+        log.info("Succes response key: {}, data: {}, partition: {}", key, data, responseOnSend.getRecordMetadata().partition());
     }
 
     public void error(Integer key, String data, Throwable ex) {
